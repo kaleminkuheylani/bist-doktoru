@@ -177,6 +177,15 @@ export default defineConfig({
     port: 3000,
     strictPort: false, // Will find next available port if 3000 is busy
     host: true,
+    proxy: {
+      // Dev proxy: /api/quotes → Yahoo Finance v7 quote endpoint
+      "/api/quotes": {
+        target: "https://query1.finance.yahoo.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace("/api/quotes", "/v7/finance/quote"),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; BistDoktoru/1.0)" },
+      },
+    },
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",

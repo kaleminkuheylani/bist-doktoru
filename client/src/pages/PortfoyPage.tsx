@@ -1,10 +1,12 @@
 /**
  * BIST Doktoru - Portföy Takip Sayfası
  * Hisse ve kripto portföy yönetimi + hesap makineleri
+ * Collect API entegrasyonu: canlı güncel fiyatlar
  */
 import { useState, useMemo } from "react";
 import { Briefcase, Plus, Trash2, Calculator, TrendingUp, ChevronUp, ChevronDown, PieChart } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { useBistStocks, useCryptoAssets } from "@/hooks/useCollectApi";
 
 type PortfolioItem = {
   id: string;
@@ -16,6 +18,7 @@ type PortfolioItem = {
   currentPrice: number;
 };
 
+// Başlangıç portföyü — currentPrice API'den otomatik güncellenir
 const DEFAULT_PORTFOLIO: PortfolioItem[] = [
   { id: "1", symbol: "THYAO", name: "Türk Hava Yolları", type: "hisse", quantity: 100, avgCost: 280, currentPrice: 312.5 },
   { id: "2", symbol: "GARAN", name: "Garanti BBVA", type: "hisse", quantity: 200, avgCost: 165, currentPrice: 178.9 },
@@ -24,11 +27,44 @@ const DEFAULT_PORTFOLIO: PortfolioItem[] = [
   { id: "5", symbol: "ETH", name: "Ethereum", type: "kripto", quantity: 0.5, avgCost: 105000, currentPrice: 124700 },
 ];
 
+// Kripto symbol → collectApi sembolü eşlemesi
+const CRYPTO_SYMBOL_MAP: Record<string, string> = {
+  BTC: "BTCUSDT", ETH: "ETHUSDT", BNB: "BNBUSDT", SOL: "SOLUSDT",
+  XRP: "XRPUSDT", ADA: "ADAUSDT", DOGE: "DOGEUSDT", AVAX: "AVAXUSDT",
+  DOT: "DOTUSDT", MATIC: "MATICUSDT", LINK: "LINKUSDT", LTC: "LTCUSDT",
+};
+
 const COLORS = ["oklch(0.65 0.20 220)", "oklch(0.70 0.18 160)", "oklch(0.75 0.18 55)", "oklch(0.65 0.18 280)", "oklch(0.60 0.22 25)", "oklch(0.75 0.18 195)"];
 const COLORS_HEX = ["#2962FF", "#00C896", "#F7931A", "#7B61FF", "#FF4757", "#00D4FF"];
 
 export default function PortfoyPage() {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>(DEFAULT_PORTFOLIO);
+
+  // Canlı fiyatlar
+  const { data: bistStocks } = useBistStocks();
+  const { data: cryptoAssets } = useCryptoAssets();
+
+  // Canlı fiyat haritası: sembol → TRY fiyatı
+  const livePrices = useMemo(() => {
+    const prices: Record<string, number> = {};
+    bistStocks.forEach((s) => { if (s.priceRaw) prices[s.symbol] = s.priceRaw; });
+    cryptoAssets.forEach((c) => {
+      const sym = c.symbol.replace("USDT", "");
+      if (c.priceTRYRaw) prices[sym] = c.priceTRYRaw;
+    });
+    return prices;
+  }, [bistStocks, cryptoAssets]);
+
+  // Portföy öğesi için güncel fiyatı döndür (API varsa canlı, yoksa manuel)
+  const getLivePrice = (item: PortfolioItem): number => {
+    if (item.type === "hisse") return livePrices[item.symbol] ?? item.currentPrice;
+    const cgSym = CRYPTO_SYMBOL_MAP[item.symbol];
+    if (cgSym) {
+      const sym = cgSym.replace("USDT", "");
+      return livePrices[sym] ?? item.currentPrice;
+    }
+    return item.currentPrice;
+  };
   const [showAddForm, setShowAddForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"portfoy" | "hesap">("portfoy");
   const [newItem, setNewItem] = useState({ symbol: "", name: "", type: "hisse" as "hisse" | "kripto", quantity: "", avgCost: "", currentPrice: "" });
@@ -42,16 +78,16 @@ export default function PortfoyPage() {
     let totalValue = 0;
     portfolio.forEach((item) => {
       totalCost += item.quantity * item.avgCost;
-      totalValue += item.quantity * item.currentPrice;
+      totalValue += item.quantity * getLivePrice(item);
     });
     const totalPnl = totalValue - totalCost;
     const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
     return { totalCost, totalValue, totalPnl, totalPnlPct };
-  }, [portfolio]);
+  }, [portfolio, livePrices]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pieData = portfolio.map((item) => ({
     name: item.symbol,
-    value: item.quantity * item.currentPrice,
+    value: item.quantity * getLivePrice(item),
   }));
 
   const addItem = () => {
@@ -290,7 +326,7 @@ export default function PortfoyPage() {
                   </div>
                   {portfolio.map((item, i) => {
                     const cost = item.quantity * item.avgCost;
-                    const value = item.quantity * item.currentPrice;
+                    const value = item.quantity * getLivePrice(item);
                     const pnl = value - cost;
                     const pnlPct = (pnl / cost) * 100;
                     const up = pnl >= 0;
@@ -392,7 +428,7 @@ export default function PortfoyPage() {
                   </ResponsiveContainer>
                   <div className="space-y-2 mt-3">
                     {portfolio.map((item, i) => {
-                      const value = item.quantity * item.currentPrice;
+                      const value = item.quantity * getLivePrice(item);
                       const pct = (value / stats.totalValue) * 100;
                       return (
                         <div key={item.id} className="flex items-center justify-between text-xs">
