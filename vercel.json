@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_BASE_URL": "@next_public_base_url"
+  }
+}
