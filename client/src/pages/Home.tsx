@@ -2,34 +2,16 @@
  * BIST Doktoru - Ana Sayfa (Dashboard)
  * Design: Bloomberg Terminal meets Modern Fintech
  * Hero section + market overview + TradingView widgets
+ * Collect API entegrasyonu: canlı piyasa istatistikleri ve hisse verileri
  */
 import { Link } from "wouter";
 import { BarChart2, Bitcoin, TrendingUp, Briefcase, ArrowRight, ChevronUp, ChevronDown, Activity, Globe, Shield } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
+import { useMarketStats, useBistStocks } from "@/hooks/useCollectApi";
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663451065819/YKtmvmmBUBqBDrsdHYiG7Z/bist-hero-bg-LsVfhNx7F8B9CqqXsiAa2d.webp";
 const MARKET_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663451065819/YKtmvmmBUBqBDrsdHYiG7Z/bist-market-visual-R2ZKH2cYjNP574MuX5jRKj.webp";
 const CRYPTO_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663451065819/YKtmvmmBUBqBDrsdHYiG7Z/bist-crypto-visual-6jpdG9RwVAVttPuHUuKmEi.webp";
-
-const MARKET_STATS = [
-  { label: "BIST 100", value: "9.847,23", change: "+1,24%", up: true, sub: "Borsa İstanbul" },
-  { label: "USD/TRY", value: "38,42", change: "+0,12%", up: true, sub: "Döviz Kuru" },
-  { label: "BTC/USD", value: "$87.450", change: "+2,87%", up: true, sub: "Bitcoin" },
-  { label: "ALTIN", value: "₺4.125", change: "+0,65%", up: true, sub: "Gram Altın" },
-  { label: "BRENT", value: "$78,45", change: "-0,34%", up: false, sub: "Ham Petrol" },
-  { label: "EUR/TRY", value: "41,85", change: "-0,08%", up: false, sub: "Euro" },
-];
-
-const TOP_STOCKS = [
-  { symbol: "THYAO", name: "Türk Hava Yolları", price: "312,50", change: "+2,15%", up: true },
-  { symbol: "GARAN", name: "Garanti BBVA", price: "178,90", change: "-0,83%", up: false },
-  { symbol: "ASELS", name: "Aselsan", price: "89,45", change: "+3,20%", up: true },
-  { symbol: "EREGL", name: "Ereğli Demir Çelik", price: "56,70", change: "-1,45%", up: false },
-  { symbol: "KCHOL", name: "Koç Holding", price: "234,60", change: "+1,89%", up: true },
-  { symbol: "SISE", name: "Şişe Cam", price: "43,20", change: "+0,47%", up: true },
-  { symbol: "AKBNK", name: "Akbank", price: "89,30", change: "-0,22%", up: false },
-  { symbol: "TUPRS", name: "Tüpraş", price: "198,30", change: "-2,10%", up: false },
-];
 
 const FEATURES = [
   {
@@ -140,6 +122,10 @@ const TICKER_TAPE_CONFIG = {
 };
 
 export default function Home() {
+  const { data: marketStats } = useMarketStats();
+  const { data: bistStocks } = useBistStocks();
+  const topStocks = bistStocks.slice(0, 8);
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -218,7 +204,7 @@ export default function Home() {
           style={{ background: "oklch(0.06 0.015 250 / 0.9)", borderTop: "1px solid oklch(0.20 0.012 250)" }}
         >
           <div className="flex items-center gap-6 min-w-max">
-            {MARKET_STATS.map((stat) => (
+            {marketStats.map((stat) => (
               <div key={stat.label} className="flex items-center gap-2">
                 <span className="text-xs" style={{ color: "oklch(0.55 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {stat.label}
@@ -279,11 +265,11 @@ export default function Home() {
               className="rounded-lg overflow-hidden"
               style={{ border: "1px solid oklch(0.20 0.012 250)", background: "oklch(0.11 0.015 250)" }}
             >
-              {TOP_STOCKS.map((stock, i) => (
+              {topStocks.map((stock, i) => (
                 <div
                   key={stock.symbol}
                   className="flex items-center justify-between px-4 py-3 transition-colors duration-150 hover:bg-white/5"
-                  style={{ borderBottom: i < TOP_STOCKS.length - 1 ? "1px solid oklch(0.17 0.012 250)" : "none" }}
+                  style={{ borderBottom: i < topStocks.length - 1 ? "1px solid oklch(0.17 0.012 250)" : "none" }}
                 >
                   <div>
                     <div className="font-bold text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
