@@ -16,13 +16,7 @@ type PortfolioItem = {
   currentPrice: number;
 };
 
-const DEFAULT_PORTFOLIO: PortfolioItem[] = [
-  { id: "1", symbol: "THYAO", name: "Türk Hava Yolları", type: "hisse", quantity: 100, avgCost: 280, currentPrice: 312.5 },
-  { id: "2", symbol: "GARAN", name: "Garanti BBVA", type: "hisse", quantity: 200, avgCost: 165, currentPrice: 178.9 },
-  { id: "3", symbol: "ASELS", name: "Aselsan", type: "hisse", quantity: 150, avgCost: 82, currentPrice: 89.45 },
-  { id: "4", symbol: "BTC", name: "Bitcoin", type: "kripto", quantity: 0.05, avgCost: 2800000, currentPrice: 3421500 },
-  { id: "5", symbol: "ETH", name: "Ethereum", type: "kripto", quantity: 0.5, avgCost: 105000, currentPrice: 124700 },
-];
+const DEFAULT_PORTFOLIO: PortfolioItem[] = [];
 
 const COLORS = ["oklch(0.65 0.20 220)", "oklch(0.70 0.18 160)", "oklch(0.75 0.18 55)", "oklch(0.65 0.18 280)", "oklch(0.60 0.22 25)", "oklch(0.75 0.18 195)"];
 const COLORS_HEX = ["#2962FF", "#00C896", "#F7931A", "#7B61FF", "#FF4757", "#00D4FF"];

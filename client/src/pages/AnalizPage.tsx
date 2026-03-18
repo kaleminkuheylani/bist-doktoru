@@ -1,65 +1,10 @@
 /**
  * BIST Doktoru - Piyasa Analizi Sayfası
- * TradingView widget'ları ile kapsamlı piyasa analizi
+ * CollectAPI döviz & altın verileri + TradingView grafikleri
  */
-import { TrendingUp, ChevronUp, ChevronDown, BarChart2, Globe } from "lucide-react";
+import { TrendingUp, Globe, BarChart2, DollarSign } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
-
-const SECTOR_DATA = [
-  { name: "Bankacılık", change: "+1,45%", up: true, stocks: ["GARAN", "AKBNK", "ISCTR", "YKBNK"] },
-  { name: "Holding", change: "+2,12%", up: true, stocks: ["KCHOL", "SAHOL", "DOHOL", "SNGYO"] },
-  { name: "Savunma", change: "+3,67%", up: true, stocks: ["ASELS", "ROKET", "HATEK"] },
-  { name: "Enerji", change: "-0,89%", up: false, stocks: ["TUPRS", "AYGAZ", "AKSEN"] },
-  { name: "Otomotiv", change: "+1,23%", up: true, stocks: ["TOASO", "FROTO", "DOAS"] },
-  { name: "Ulaşım", change: "+2,45%", up: true, stocks: ["THYAO", "PGSUS", "CLEBI"] },
-  { name: "Metal", change: "-1,34%", up: false, stocks: ["EREGL", "KRDMD", "ALKIM"] },
-  { name: "Perakende", change: "+0,78%", up: true, stocks: ["BIMAS", "MGROS", "SOKM"] },
-];
-
-const MARKET_NEWS = [
-  {
-    title: "BIST 100 Yeni Rekor Kırdı",
-    summary: "Borsa İstanbul'da BIST 100 endeksi bugün 9.847 puanla tarihi zirvesini yeniledi. Yabancı yatırımcıların alım baskısı endeksi yukarı taşıdı.",
-    time: "2 saat önce",
-    tag: "BIST",
-    up: true,
-  },
-  {
-    title: "Fed Faiz Kararı Piyasaları Sarstı",
-    summary: "ABD Merkez Bankası Fed'in faiz kararı açıklandı. Piyasalar beklentilerin altında kalan açıklamaya olumlu tepki verdi.",
-    time: "4 saat önce",
-    tag: "Küresel",
-    up: true,
-  },
-  {
-    title: "Bitcoin 90.000 Dolar Sınırını Test Ediyor",
-    summary: "Kripto para piyasasının lideri Bitcoin, 90.000 dolar seviyesini test etmeye devam ediyor. Kurumsal alımlar artış gösteriyor.",
-    time: "5 saat önce",
-    tag: "Kripto",
-    up: true,
-  },
-  {
-    title: "Türk Lirası Dolar Karşısında Değer Kazandı",
-    summary: "TCMB'nin faiz kararı sonrası Türk Lirası, dolar karşısında değer kazandı. USD/TRY paritesi 38,42 seviyesine geriledi.",
-    time: "6 saat önce",
-    tag: "Döviz",
-    up: false,
-  },
-  {
-    title: "Aselsan'dan Yeni Savunma Sanayi Anlaşması",
-    summary: "Aselsan, yeni bir savunma sanayi ihracat anlaşması imzaladı. Hisse senedi yüzde 3,2 değer kazandı.",
-    time: "8 saat önce",
-    tag: "Hisse",
-    up: true,
-  },
-  {
-    title: "Altın Fiyatları Yükselişte",
-    summary: "Küresel belirsizlik ortamında altın fiyatları yükselişini sürdürüyor. Gram altın 4.125 TL seviyesine ulaştı.",
-    time: "10 saat önce",
-    tag: "Emtia",
-    up: true,
-  },
-];
+import { useCurrency, useGold } from "@/hooks/useMarketData";
 
 const GLOBAL_MARKETS_CONFIG = {
   colorTheme: "dark",
@@ -108,6 +53,127 @@ const GLOBAL_MARKETS_CONFIG = {
   ],
 };
 
+// CollectAPI döviz tablosu
+function CurrencyTable() {
+  const { data: currency, loading } = useCurrency();
+
+  // Gösterilecek dövizler
+  const wanted = ["USD", "EUR", "GBP", "CHF", "JPY", "SAR", "AUD", "CAD", "DKK", "SEK", "NOK"];
+
+  const filtered = currency
+    ? currency.filter((c) => wanted.some((code) => c.name.startsWith(code) || c.name.includes(code + " ")))
+    : [];
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
+        <DollarSign className="w-5 h-5" style={{ color: "oklch(0.65 0.20 220)" }} />
+        Döviz Kurları
+        <span className="text-xs font-normal ml-1 px-2 py-0.5 rounded-full" style={{ background: "oklch(0.70 0.18 160 / 0.12)", color: "oklch(0.70 0.18 160)", fontFamily: "'JetBrains Mono', monospace" }}>
+          Canlı
+        </span>
+      </h2>
+      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.20 0.012 250)" }}>
+        <div
+          className="grid grid-cols-3 px-5 py-3 text-xs font-semibold"
+          style={{ background: "oklch(0.13 0.015 250)", borderBottom: "1px solid oklch(0.20 0.012 250)", color: "oklch(0.55 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          <span>Para Birimi</span>
+          <span className="text-right">Alış (₺)</span>
+          <span className="text-right">Satış (₺)</span>
+        </div>
+        {loading && (
+          <div className="px-5 py-6 text-center">
+            <span className="text-xs animate-pulse" style={{ color: "oklch(0.50 0.010 250)" }}>Döviz verileri yükleniyor...</span>
+          </div>
+        )}
+        {!loading && filtered.length === 0 && (
+          <div className="px-5 py-6 text-center">
+            <span className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>Veri alınamadı</span>
+          </div>
+        )}
+        {filtered.map((item, i) => (
+          <div
+            key={item.name}
+            className="grid grid-cols-3 px-5 py-3"
+            style={{
+              borderBottom: i < filtered.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
+              background: i % 2 === 0 ? "oklch(0.11 0.015 250)" : "oklch(0.105 0.015 250)",
+            }}
+          >
+            <span className="text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.85 0.005 250)" }}>
+              {item.name}
+            </span>
+            <span className="text-right font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.80 0.005 250)" }}>
+              {item.buying}
+            </span>
+            <span className="text-right font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.90 0.005 250)" }}>
+              {item.selling}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// CollectAPI altın tablosu
+function GoldTable() {
+  const { data: gold, loading } = useGold();
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
+        <BarChart2 className="w-5 h-5" style={{ color: "oklch(0.75 0.18 55)" }} />
+        Altın Fiyatları
+        <span className="text-xs font-normal ml-1 px-2 py-0.5 rounded-full" style={{ background: "oklch(0.70 0.18 160 / 0.12)", color: "oklch(0.70 0.18 160)", fontFamily: "'JetBrains Mono', monospace" }}>
+          Canlı
+        </span>
+      </h2>
+      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.20 0.012 250)" }}>
+        <div
+          className="grid grid-cols-3 px-5 py-3 text-xs font-semibold"
+          style={{ background: "oklch(0.13 0.015 250)", borderBottom: "1px solid oklch(0.20 0.012 250)", color: "oklch(0.55 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          <span>Tür</span>
+          <span className="text-right">Alış (₺)</span>
+          <span className="text-right">Satış (₺)</span>
+        </div>
+        {loading && (
+          <div className="px-5 py-6 text-center">
+            <span className="text-xs animate-pulse" style={{ color: "oklch(0.50 0.010 250)" }}>Altın verileri yükleniyor...</span>
+          </div>
+        )}
+        {!loading && (!gold || gold.length === 0) && (
+          <div className="px-5 py-6 text-center">
+            <span className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>Veri alınamadı</span>
+          </div>
+        )}
+        {gold && gold.map((item, i) => (
+          <div
+            key={item.name}
+            className="grid grid-cols-3 px-5 py-3"
+            style={{
+              borderBottom: i < gold.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
+              background: i % 2 === 0 ? "oklch(0.11 0.015 250)" : "oklch(0.105 0.015 250)",
+            }}
+          >
+            <span className="text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.85 0.005 250)" }}>
+              {item.name}
+            </span>
+            <span className="text-right font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.80 0.005 250)" }}>
+              {item.buy}
+            </span>
+            <span className="text-right font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: item.sell === "-" ? "oklch(0.45 0.010 250)" : "oklch(0.90 0.005 250)" }}>
+              {item.sell}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AnalizPage() {
   return (
     <div className="min-h-screen">
@@ -128,12 +194,12 @@ export default function AnalizPage() {
           </h1>
         </div>
         <p className="text-sm ml-11" style={{ color: "oklch(0.55 0.010 250)" }}>
-          Sektör bazlı analizler, teknik göstergeler ve küresel piyasa verileri
+          Küresel piyasalar, canlı döviz/altın verileri ve teknik analizler
         </p>
       </div>
 
       <div className="p-6 space-y-8">
-        {/* Global Markets Widget */}
+        {/* Küresel Piyasalar Widget */}
         <div>
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
             <Globe className="w-5 h-5" style={{ color: "oklch(0.65 0.20 220)" }} />
@@ -148,121 +214,13 @@ export default function AnalizPage() {
           </div>
         </div>
 
-        {/* Sector Analysis + News */}
+        {/* Canlı Döviz & Altın Tabloları (CollectAPI) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sector Performance */}
-          <div>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
-              <BarChart2 className="w-5 h-5" style={{ color: "oklch(0.65 0.20 220)" }} />
-              Sektör Performansı
-            </h2>
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ border: "1px solid oklch(0.20 0.012 250)" }}
-            >
-              {SECTOR_DATA.map((sector, i) => (
-                <div
-                  key={sector.name}
-                  className="px-5 py-4 transition-colors hover:bg-white/5"
-                  style={{ borderBottom: i < SECTOR_DATA.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none", background: i % 2 === 0 ? "oklch(0.11 0.015 250)" : "oklch(0.105 0.015 250)" }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
-                      {sector.name}
-                    </span>
-                    <span
-                      className="flex items-center gap-0.5 text-sm font-mono px-2 py-0.5 rounded"
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        color: sector.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-                        background: sector.up ? "oklch(0.70 0.18 160 / 0.1)" : "oklch(0.60 0.22 25 / 0.1)",
-                      }}
-                    >
-                      {sector.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      {sector.change}
-                    </span>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="h-1.5 rounded-full mb-2" style={{ background: "oklch(0.18 0.012 250)" }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.abs(parseFloat(sector.change)) * 20}%`,
-                        background: sector.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-                        maxWidth: "100%",
-                      }}
-                    />
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {sector.stocks.map((s) => (
-                      <span
-                        key={s}
-                        className="text-xs px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "oklch(0.65 0.20 220 / 0.08)",
-                          color: "oklch(0.65 0.20 220)",
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Market News */}
-          <div>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
-              <TrendingUp className="w-5 h-5" style={{ color: "oklch(0.65 0.20 220)" }} />
-              Piyasa Haberleri
-            </h2>
-            <div className="space-y-3">
-              {MARKET_NEWS.map((news, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl p-4 transition-all hover:scale-[1.01]"
-                  style={{ background: "oklch(0.12 0.015 250)", border: "1px solid oklch(0.20 0.012 250)" }}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="font-semibold text-sm leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
-                      {news.title}
-                    </h3>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded flex-shrink-0"
-                      style={{
-                        background: "oklch(0.65 0.20 220 / 0.12)",
-                        color: "oklch(0.65 0.20 220)",
-                        fontFamily: "'Space Grotesk', sans-serif",
-                      }}
-                    >
-                      {news.tag}
-                    </span>
-                  </div>
-                  <p className="text-xs leading-relaxed mb-2" style={{ color: "oklch(0.58 0.010 250)" }}>
-                    {news.summary}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "oklch(0.45 0.010 250)" }}>
-                      {news.time}
-                    </span>
-                    <span
-                      className="text-xs flex items-center gap-0.5"
-                      style={{ color: news.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)" }}
-                    >
-                      {news.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      {news.up ? "Yükseliş" : "Düşüş"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CurrencyTable />
+          <GoldTable />
         </div>
 
-        {/* Economic Calendar Widget */}
+        {/* Ekonomik Takvim */}
         <div>
           <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
             Ekonomik Takvim
@@ -284,7 +242,7 @@ export default function AnalizPage() {
           </div>
         </div>
 
-        {/* Heatmap Widget */}
+        {/* Piyasa Isı Haritası */}
         <div>
           <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
             Piyasa Isı Haritası

@@ -1,31 +1,34 @@
 /**
  * BIST Doktoru - BIST Hisse Senetleri Sayfası
- * TradingView widget'ları ile canlı BIST verileri
+ * CollectAPI canlı hisse verileri + TradingView grafikleri
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { BarChart2, ChevronUp, ChevronDown, Search } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
+import { useStocks, useBist } from "@/hooks/useMarketData";
 
-const BIST_STOCKS = [
-  { symbol: "THYAO", name: "Türk Hava Yolları", sector: "Ulaşım", price: "312,50", change: "+2,15%", volume: "145M", mktCap: "₺42,3B", up: true },
-  { symbol: "GARAN", name: "Garanti BBVA", sector: "Bankacılık", price: "178,90", change: "-0,83%", volume: "98M", mktCap: "₺75,1B", up: false },
-  { symbol: "ASELS", name: "Aselsan", sector: "Savunma", price: "89,45", change: "+3,20%", volume: "67M", mktCap: "₺28,6B", up: true },
-  { symbol: "EREGL", name: "Ereğli Demir Çelik", sector: "Metal", price: "56,70", change: "-1,45%", volume: "112M", mktCap: "₺34,0B", up: false },
-  { symbol: "KCHOL", name: "Koç Holding", sector: "Holding", price: "234,60", change: "+1,89%", volume: "45M", mktCap: "₺94,5B", up: true },
-  { symbol: "SISE", name: "Şişe Cam", sector: "Cam", price: "43,20", change: "+0,47%", volume: "89M", mktCap: "₺25,9B", up: true },
-  { symbol: "AKBNK", name: "Akbank", sector: "Bankacılık", price: "89,30", change: "-0,22%", volume: "76M", mktCap: "₺37,5B", up: false },
-  { symbol: "TUPRS", name: "Tüpraş", sector: "Enerji", price: "198,30", change: "-2,10%", volume: "34M", mktCap: "₺49,6B", up: false },
-  { symbol: "ISCTR", name: "İş Bankası C", sector: "Bankacılık", price: "24,56", change: "+1,12%", volume: "234M", mktCap: "₺43,8B", up: true },
-  { symbol: "BIMAS", name: "BİM Mağazalar", sector: "Perakende", price: "567,00", change: "+0,89%", volume: "23M", mktCap: "₺56,7B", up: true },
-  { symbol: "SAHOL", name: "Sabancı Holding", sector: "Holding", price: "89,75", change: "+1,34%", volume: "56M", mktCap: "₺35,9B", up: true },
-  { symbol: "PGSUS", name: "Pegasus Hava Yolları", sector: "Ulaşım", price: "1.234,00", change: "-0,56%", volume: "12M", mktCap: "₺24,7B", up: false },
-  { symbol: "TOASO", name: "Tofaş Oto Fab.", sector: "Otomotiv", price: "345,50", change: "+2,67%", volume: "28M", mktCap: "₺34,6B", up: true },
-  { symbol: "FROTO", name: "Ford Otosan", sector: "Otomotiv", price: "1.456,00", change: "-1,23%", volume: "8M", mktCap: "₺58,2B", up: false },
-  { symbol: "ARCLK", name: "Arçelik", sector: "Dayanıklı Tüketim", price: "178,40", change: "+0,79%", volume: "43M", mktCap: "₺35,7B", up: true },
-  { symbol: "TCELL", name: "Turkcell", sector: "Telekomünikasyon", price: "89,60", change: "+1,56%", volume: "67M", mktCap: "₺44,8B", up: true },
-];
+// Sektör eşleştirme (CollectAPI sadece kod verir, sektörü text'ten tahmin ederiz)
+const SECTOR_KEYWORDS: Record<string, string> = {
+  BANKA: "Bankacılık", FINANS: "Bankacılık", KREDI: "Bankacılık",
+  HAVA: "Ulaşım", PEGASUS: "Ulaşım", TASIMACILIK: "Ulaşım",
+  DEMIR: "Metal", CELIK: "Metal", ALUM: "Metal",
+  HOLDING: "Holding", KOC: "Holding", SABANCI: "Holding",
+  ENERJI: "Enerji", PETROL: "Enerji", GAZ: "Enerji",
+  OTOMOT: "Otomotiv", FORD: "Otomotiv", TOFAS: "Otomotiv",
+  TELEKOM: "Telekomünikasyon", TURKCELL: "Telekomünikasyon",
+  SAVUNMA: "Savunma", ASELSAN: "Savunma",
+  PERAKENDE: "Perakende", MIGROS: "Perakende", BIM: "Perakende",
+};
 
-const SECTORS = ["Tümü", "Bankacılık", "Holding", "Ulaşım", "Savunma", "Metal", "Enerji", "Otomotiv", "Perakende", "Telekomünikasyon"];
+function getSector(text: string): string {
+  const upper = text.toUpperCase();
+  for (const [keyword, sector] of Object.entries(SECTOR_KEYWORDS)) {
+    if (upper.includes(keyword)) return sector;
+  }
+  return "Diğer";
+}
+
+const SECTORS = ["Tümü", "Bankacılık", "Holding", "Ulaşım", "Savunma", "Metal", "Enerji", "Otomotiv", "Perakende", "Telekomünikasyon", "Diğer"];
 
 export default function BistPage() {
   const [selectedStock, setSelectedStock] = useState("BIST:THYAO");
@@ -33,12 +36,26 @@ export default function BistPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSector, setSelectedSector] = useState("Tümü");
 
-  const filteredStocks = BIST_STOCKS.filter((s) => {
-    const matchSearch = s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchSector = selectedSector === "Tümü" || s.sector === selectedSector;
-    return matchSearch && matchSector;
-  });
+  const { data: stocks, loading } = useStocks();
+  const { data: bist } = useBist();
+
+  const enrichedStocks = useMemo(() => {
+    if (!stocks) return [];
+    return stocks.map((s) => ({
+      ...s,
+      sector: getSector(s.text),
+    }));
+  }, [stocks]);
+
+  const filteredStocks = useMemo(() => {
+    return enrichedStocks.filter((s) => {
+      const matchSearch =
+        s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.text.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSector = selectedSector === "Tümü" || s.sector === selectedSector;
+      return matchSearch && matchSector;
+    });
+  }, [enrichedStocks, searchQuery, selectedSector]);
 
   return (
     <div className="min-h-screen">
@@ -64,21 +81,41 @@ export default function BistPage() {
       </div>
 
       <div className="p-6">
-        {/* BIST 100 Index Widget */}
-        <div className="mb-6">
-          <div className="tv-widget-container" style={{ height: "80px" }}>
-            <TradingViewWidget
-              scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
-              config={{ symbol: "BIST:XU100", width: "100%", colorTheme: "dark", isTransparent: true, locale: "tr" }}
-              height={80}
-            />
+        {/* BIST 100 Index - Canlı */}
+        {bist && (
+          <div
+            className="mb-6 p-4 rounded-xl flex items-center gap-6 flex-wrap"
+            style={{ background: "oklch(0.12 0.015 250)", border: "1px solid oklch(0.20 0.012 250)" }}
+          >
+            <div>
+              <div className="text-xs mb-0.5" style={{ color: "oklch(0.55 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                BIST 100 Endeksi
+              </div>
+              <div className="font-mono text-2xl font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.95 0.005 250)" }}>
+                {bist.currentstr}
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-1 text-lg font-mono font-bold"
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                color: bist.changerate >= 0 ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
+              }}
+            >
+              {bist.changerate >= 0 ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {bist.changerate >= 0 ? "+" : ""}{bist.changeratestr}%
+            </div>
+            <div className="flex gap-4 text-xs ml-auto" style={{ color: "oklch(0.55 0.010 250)", fontFamily: "'JetBrains Mono', monospace" }}>
+              <span>Min: {bist.minstr}</span>
+              <span>Max: {bist.maxstr}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left: Stock List */}
+          {/* Sol: Hisse Listesi (CollectAPI) */}
           <div className="xl:col-span-1">
-            {/* Search & Filter */}
+            {/* Arama & Filtre */}
             <div className="mb-4 space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.50 0.010 250)" }} />
@@ -115,7 +152,7 @@ export default function BistPage() {
               </div>
             </div>
 
-            {/* Stock List */}
+            {/* Hisse Listesi */}
             <div
               className="rounded-xl overflow-hidden"
               style={{ border: "1px solid oklch(0.20 0.012 250)", background: "oklch(0.11 0.015 250)" }}
@@ -129,59 +166,71 @@ export default function BistPage() {
                 <span className="text-right">Değişim</span>
               </div>
               <div className="overflow-y-auto" style={{ maxHeight: "480px" }}>
-                {filteredStocks.map((stock, i) => (
-                  <div
-                    key={stock.symbol}
-                    className="grid grid-cols-3 px-4 py-3 cursor-pointer transition-all duration-150"
-                    style={{
-                      borderBottom: i < filteredStocks.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
-                      background: selectedSymbol === stock.symbol ? "oklch(0.65 0.20 220 / 0.08)" : "transparent",
-                    }}
-                    onClick={() => {
-                      setSelectedStock(`BIST:${stock.symbol}`);
-                      setSelectedSymbol(stock.symbol);
-                    }}
-                  >
-                    <div>
-                      <div
-                        className="font-bold text-xs"
-                        style={{
-                          fontFamily: "'Space Grotesk', sans-serif",
-                          color: selectedSymbol === stock.symbol ? "oklch(0.65 0.20 220)" : "oklch(0.90 0.005 250)",
-                        }}
-                      >
-                        {stock.symbol}
-                      </div>
-                      <div className="text-xs" style={{ color: "oklch(0.45 0.010 250)" }}>
-                        {stock.sector}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-xs" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.88 0.005 250)" }}>
-                        ₺{stock.price}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className="flex items-center justify-end gap-0.5 text-xs font-mono"
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: stock.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-                        }}
-                      >
-                        {stock.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        {stock.change}
-                      </div>
-                    </div>
+                {loading && (
+                  <div className="px-4 py-6 text-center">
+                    <span className="text-xs animate-pulse" style={{ color: "oklch(0.50 0.010 250)" }}>Hisse verileri yükleniyor...</span>
                   </div>
-                ))}
+                )}
+                {!loading && filteredStocks.length === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <span className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>Sonuç bulunamadı</span>
+                  </div>
+                )}
+                {filteredStocks.map((stock, i) => {
+                  const up = stock.rate >= 0;
+                  return (
+                    <div
+                      key={stock.code}
+                      className="grid grid-cols-3 px-4 py-3 cursor-pointer transition-all duration-150"
+                      style={{
+                        borderBottom: i < filteredStocks.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
+                        background: selectedSymbol === stock.code ? "oklch(0.65 0.20 220 / 0.08)" : "transparent",
+                      }}
+                      onClick={() => {
+                        setSelectedStock(`BIST:${stock.code}`);
+                        setSelectedSymbol(stock.code);
+                      }}
+                    >
+                      <div>
+                        <div
+                          className="font-bold text-xs"
+                          style={{
+                            fontFamily: "'Space Grotesk', sans-serif",
+                            color: selectedSymbol === stock.code ? "oklch(0.65 0.20 220)" : "oklch(0.90 0.005 250)",
+                          }}
+                        >
+                          {stock.code}
+                        </div>
+                        <div className="text-xs" style={{ color: "oklch(0.45 0.010 250)" }}>
+                          {stock.sector}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-xs" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.88 0.005 250)" }}>
+                          ₺{stock.lastpricestr}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className="flex items-center justify-end gap-0.5 text-xs font-mono"
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            color: up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
+                          }}
+                        >
+                          {up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {up ? "+" : ""}{stock.rate.toFixed(2)}%
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Right: TradingView Chart */}
+          {/* Sağ: TradingView Grafik */}
           <div className="xl:col-span-2 space-y-4">
-            {/* Advanced Chart */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
@@ -213,7 +262,6 @@ export default function BistPage() {
               </div>
             </div>
 
-            {/* Technical Analysis Widget */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-semibold mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.80 0.005 250)" }}>
@@ -280,90 +328,6 @@ export default function BistPage() {
               }}
               height="100%"
             />
-          </div>
-        </div>
-
-        {/* Detailed stock table */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
-            Hisse Senedi Detay Tablosu
-          </h2>
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid oklch(0.20 0.012 250)" }}
-          >
-            <div
-              className="grid grid-cols-6 px-5 py-3 text-xs font-semibold"
-              style={{
-                background: "oklch(0.13 0.015 250)",
-                borderBottom: "1px solid oklch(0.20 0.012 250)",
-                color: "oklch(0.55 0.010 250)",
-                fontFamily: "'Space Grotesk', sans-serif",
-              }}
-            >
-              <span>Hisse / Şirket</span>
-              <span>Sektör</span>
-              <span className="text-right">Son Fiyat</span>
-              <span className="text-right">Değişim</span>
-              <span className="text-right">Hacim</span>
-              <span className="text-right">Piyasa Değeri</span>
-            </div>
-            {BIST_STOCKS.map((stock, i) => (
-              <div
-                key={stock.symbol}
-                className="grid grid-cols-6 px-5 py-3 cursor-pointer transition-all duration-150 hover:bg-white/5"
-                style={{
-                  borderBottom: i < BIST_STOCKS.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
-                  background: i % 2 === 0 ? "oklch(0.11 0.015 250)" : "oklch(0.105 0.015 250)",
-                }}
-                onClick={() => {
-                  setSelectedStock(`BIST:${stock.symbol}`);
-                  setSelectedSymbol(stock.symbol);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                <div>
-                  <div className="font-bold text-xs" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
-                    {stock.symbol}
-                  </div>
-                  <div className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>
-                    {stock.name}
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs" style={{ color: "oklch(0.60 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-                    {stock.sector}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <span className="font-mono text-xs" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.90 0.005 250)" }}>
-                    ₺{stock.price}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <span
-                    className="flex items-center gap-0.5 text-xs font-mono"
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: stock.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-                    }}
-                  >
-                    {stock.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                    {stock.change}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <span className="text-xs" style={{ color: "oklch(0.60 0.010 250)", fontFamily: "'JetBrains Mono', monospace" }}>
-                    {stock.volume}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <span className="text-xs" style={{ color: "oklch(0.60 0.010 250)", fontFamily: "'JetBrains Mono', monospace" }}>
-                    {stock.mktCap}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

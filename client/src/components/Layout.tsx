@@ -1,9 +1,9 @@
 /**
  * BIST Doktoru - Layout Component
  * Design: Bloomberg Terminal meets Modern Fintech
- * Dark theme, sidebar navigation, live ticker strip
+ * Dark theme, sidebar navigation, canlı ticker (CollectAPI)
  */
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   BarChart2,
@@ -17,28 +17,8 @@ import {
   Activity,
   ChevronUp,
   ChevronDown,
-  Minus,
 } from "lucide-react";
-
-// Ticker data - static representative data (TradingView provides live data in widgets)
-const TICKER_DATA = [
-  { symbol: "BIST100", price: "9.847,23", change: "+1,24%", up: true },
-  { symbol: "THYAO", price: "₺312,50", change: "+2,15%", up: true },
-  { symbol: "GARAN", price: "₺178,90", change: "-0,83%", up: false },
-  { symbol: "ASELS", price: "₺89,45", change: "+3,20%", up: true },
-  { symbol: "EREGL", price: "₺56,70", change: "-1,45%", up: false },
-  { symbol: "SISE", price: "₺43,20", change: "+0,47%", up: true },
-  { symbol: "KCHOL", price: "₺234,60", change: "+1,89%", up: true },
-  { symbol: "AKBNK", price: "₺89,30", change: "-0,22%", up: false },
-  { symbol: "BTC/TRY", price: "₺3.421.500", change: "+2,87%", up: true },
-  { symbol: "ETH/TRY", price: "₺183.400", change: "+1,53%", up: true },
-  { symbol: "USD/TRY", price: "₺38,42", change: "+0,12%", up: true },
-  { symbol: "EUR/TRY", price: "₺41,85", change: "-0,08%", up: false },
-  { symbol: "GOLD/TRY", price: "₺4.125", change: "+0,65%", up: true },
-  { symbol: "BRENT", price: "$78,45", change: "-0,34%", up: false },
-  { symbol: "ISCTR", price: "₺24,56", change: "+1,12%", up: true },
-  { symbol: "TUPRS", price: "₺198,30", change: "-2,10%", up: false },
-];
+import { useCurrency, useGold, useBist } from "@/hooks/useMarketData";
 
 const NAV_ITEMS = [
   { href: "/", label: "Ana Sayfa", icon: Home },
@@ -49,29 +29,103 @@ const NAV_ITEMS = [
   { href: "/hakkimizda", label: "Hakkımızda", icon: Info },
 ];
 
+// Döviz kodunu kısa ada çevir
+function currencyShortName(name: string): string {
+  if (name.includes("USD")) return "USD/TRY";
+  if (name.includes("EUR") && !name.includes("USD")) return "EUR/TRY";
+  if (name.includes("GBP")) return "GBP/TRY";
+  if (name.includes("CHF")) return "CHF/TRY";
+  return name.split(" ")[0];
+}
+
 function TickerStrip() {
-  const doubled = [...TICKER_DATA, ...TICKER_DATA];
+  const { data: currency } = useCurrency();
+  const { data: gold } = useGold();
+  const { data: bist } = useBist();
+
+  // Gösterilecek veriler
+  const items: { label: string; value: string; change?: string; up?: boolean }[] = [];
+
+  if (bist) {
+    items.push({
+      label: "BIST 100",
+      value: bist.currentstr,
+      change: `${bist.changerate >= 0 ? "+" : ""}${bist.changeratestr}%`,
+      up: bist.changerate >= 0,
+    });
+  }
+
+  if (currency) {
+    const wanted = ["USD", "EUR", "GBP"];
+    wanted.forEach((code) => {
+      const item = currency.find((c) => c.name.includes(code) && !c.name.includes("USD") === (code !== "USD"));
+      const found = currency.find((c) => c.name.startsWith(code) || c.name.includes(code + " "));
+      const entry = found || item;
+      if (entry) {
+        items.push({
+          label: currencyShortName(entry.name),
+          value: `₺${entry.selling}`,
+        });
+      }
+    });
+  }
+
+  if (gold) {
+    const gramAltin = gold.find((g) => g.name === "Gram Altın" || g.name.includes("Gram"));
+    if (gramAltin) {
+      items.push({ label: "Gram Altın", value: `₺${gramAltin.buy}` });
+    }
+  }
+
+  // Veriler yüklenene kadar boş şerit
+  if (items.length === 0) {
+    return (
+      <div
+        className="h-[46px] border-b flex items-center px-4"
+        style={{ borderColor: "oklch(0.22 0.012 250)", background: "oklch(0.10 0.015 250)" }}
+      >
+        <span className="text-xs animate-pulse" style={{ color: "oklch(0.45 0.010 250)", fontFamily: "'JetBrains Mono', monospace" }}>
+          Piyasa verileri yükleniyor...
+        </span>
+      </div>
+    );
+  }
+
+  // Sonsuz kaydırma için çift liste
+  const doubled = [...items, ...items];
+
   return (
-    <div className="h-9 overflow-hidden border-b" style={{ borderColor: "oklch(0.22 0.012 250)", background: "oklch(0.10 0.015 250)" }}>
+    <div
+      className="h-[46px] overflow-hidden border-b"
+      style={{ borderColor: "oklch(0.22 0.012 250)", background: "oklch(0.10 0.015 250)" }}
+    >
       <div className="ticker-track h-full flex items-center">
         {doubled.map((item, i) => (
           <div key={i} className="ticker-item text-xs">
-            <span className="font-medium" style={{ color: "oklch(0.75 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-              {item.symbol}
-            </span>
-            <span className="font-mono" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.90 0.005 250)" }}>
-              {item.price}
+            <span
+              className="font-medium"
+              style={{ color: "oklch(0.75 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              {item.label}
             </span>
             <span
-              className="flex items-center gap-0.5 font-mono text-xs"
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                color: item.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-              }}
+              className="font-mono"
+              style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.90 0.005 250)" }}
             >
-              {item.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {item.change}
+              {item.value}
             </span>
+            {item.change && (
+              <span
+                className="flex items-center gap-0.5 font-mono text-xs"
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: item.up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
+                }}
+              >
+                {item.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {item.change}
+              </span>
+            )}
             <span style={{ color: "oklch(0.30 0.012 250)", margin: "0 0.5rem" }}>|</span>
           </div>
         ))}
@@ -85,7 +139,6 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
@@ -94,7 +147,6 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 bottom-0 z-50 w-64 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:z-auto ${
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -176,7 +228,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         <div className="px-4 py-4 border-t" style={{ borderColor: "oklch(0.20 0.012 250)" }}>
           <div className="text-xs space-y-1" style={{ color: "oklch(0.45 0.010 250)" }}>
             <div>© 2025 BIST Doktoru</div>
-            <div>Veriler TradingView ile sunulmaktadır</div>
+            <div>Veriler CollectAPI ile sunulmaktadır</div>
           </div>
         </div>
       </aside>
@@ -189,14 +241,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "oklch(0.08 0.015 250)" }}>
-      {/* Ticker Strip */}
+      {/* Canlı Ticker Strip */}
       <div className="fixed top-0 left-0 right-0 z-30">
         <TickerStrip />
       </div>
 
       {/* Mobile top bar */}
       <div
-        className="fixed top-9 left-0 right-0 z-30 flex items-center gap-3 px-4 py-3 lg:hidden"
+        className="fixed top-[46px] left-0 right-0 z-30 flex items-center gap-3 px-4 py-3 lg:hidden"
         style={{
           background: "oklch(0.10 0.015 250)",
           borderBottom: "1px solid oklch(0.20 0.012 250)",
@@ -223,7 +275,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main
-        className="flex-1 lg:ml-64 mt-9 lg:mt-9"
+        className="flex-1 lg:ml-64 mt-[46px] lg:mt-[46px]"
         style={{ paddingTop: "2.5rem" }}
       >
         <div className="lg:hidden" style={{ height: "3rem" }} />
