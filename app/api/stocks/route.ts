@@ -31,7 +31,16 @@ async function fromCollectApi() {
   if (!res.ok) throw new Error(`CollectAPI error: ${res.status}`);
   const json = await res.json();
   if (!json.success) throw new Error("CollectAPI: success=false");
-  return json;
+  const result = (json.result as any[]).map((item: any) => ({
+    code: String(item.code ?? ""),
+    text: item.text || item.name || String(item.code ?? ""),
+    lastprice: parseFloat(item.lastprice) || 0,
+    lastpricestr: item.lastpricestr || String((parseFloat(item.lastprice) || 0).toFixed(2)),
+    rate: parseFloat(item.rate) || 0,
+    hacim: parseFloat(item.hacim) || 0,
+    hacimstr: item.hacimstr || fmtHacim(parseFloat(item.hacim) || 0),
+  }));
+  return { success: true, result };
 }
 
 async function fromTwelveData() {
