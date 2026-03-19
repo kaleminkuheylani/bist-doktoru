@@ -3,7 +3,7 @@
  * CollectAPI canlı hisse verileri + TradingView grafikleri
  */
 import { useState, useMemo } from "react";
-import { BarChart2, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { BarChart2, ChevronUp, ChevronDown } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
 import { useStocks, useBist } from "@/hooks/useMarketData";
 
@@ -33,7 +33,6 @@ const SECTORS = ["Tümü", "Bankacılık", "Holding", "Ulaşım", "Savunma", "Me
 export default function BistPage() {
   const [selectedStock, setSelectedStock] = useState("BIST:THYAO");
   const [selectedSymbol, setSelectedSymbol] = useState("THYAO");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSector, setSelectedSector] = useState("Tümü");
 
   const { data: stocks, loading } = useStocks();
@@ -49,13 +48,10 @@ export default function BistPage() {
 
   const filteredStocks = useMemo(() => {
     return enrichedStocks.filter((s) => {
-      const matchSearch =
-        s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.text.toLowerCase().includes(searchQuery.toLowerCase());
       const matchSector = selectedSector === "Tümü" || s.sector === selectedSector;
-      return matchSearch && matchSector;
+      return matchSector;
     });
-  }, [enrichedStocks, searchQuery, selectedSector]);
+  }, [enrichedStocks, selectedSector]);
 
   return (
     <div className="min-h-screen">
@@ -115,24 +111,8 @@ export default function BistPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Sol: Hisse Listesi (CollectAPI) */}
           <div className="xl:col-span-1">
-            {/* Arama & Filtre */}
-            <div className="mb-4 space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.50 0.010 250)" }} />
-                <input
-                  type="text"
-                  placeholder="Hisse ara... (THYAO, GARAN...)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm outline-none"
-                  style={{
-                    background: "oklch(0.14 0.015 250)",
-                    border: "1px solid oklch(0.22 0.012 250)",
-                    color: "oklch(0.90 0.005 250)",
-                    fontFamily: "'Space Grotesk', sans-serif",
-                  }}
-                />
-              </div>
+            {/* Filtre */}
+            <div className="mb-4">
               <div className="flex gap-2 flex-wrap">
                 {SECTORS.slice(0, 6).map((sector) => (
                   <button

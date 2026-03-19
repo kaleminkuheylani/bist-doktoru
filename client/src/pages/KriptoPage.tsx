@@ -3,7 +3,7 @@
  * Binance API canlı fiyatlar + TradingView ana grafik
  */
 import { useState } from "react";
-import { Bitcoin, Search, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from "lucide-react";
+import { Bitcoin, Search, ChevronUp, ChevronDown } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
 import { useBinanceTickers } from "@/hooks/useMarketData";
 import type { BinanceTicker } from "@/lib/binanceApi";
@@ -295,138 +295,6 @@ export default function KriptoPage() {
           </div>
         </div>
 
-        {/* Tüm Kripto Tablosu — Binance canlı veriler */}
-        <div className="mt-8">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
-              Piyasa Özeti
-            </h2>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: "oklch(0.70 0.18 160 / 0.12)", color: "oklch(0.70 0.18 160)", fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              Binance · 30s güncelleme
-            </span>
-          </div>
-
-          <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.20 0.012 250)" }}>
-            {/* Tablo başlığı */}
-            <div
-              className="grid px-5 py-3 text-xs font-semibold"
-              style={{
-                gridTemplateColumns: "2fr 2fr 1.5fr 2fr 2fr 2fr",
-                background: "oklch(0.13 0.015 250)",
-                borderBottom: "1px solid oklch(0.20 0.012 250)",
-                color: "oklch(0.55 0.010 250)",
-                fontFamily: "'Space Grotesk', sans-serif",
-              }}
-            >
-              <span>Kripto Para</span>
-              <span className="text-right">Fiyat (USD)</span>
-              <span className="text-right">24s Değişim</span>
-              <span className="text-right">24s Yüksek</span>
-              <span className="text-right">24s Düşük</span>
-              <span className="text-right">Hacim (USD)</span>
-            </div>
-
-            {loading && (
-              <div className="px-5 py-8 text-center">
-                <span className="text-xs animate-pulse" style={{ color: "oklch(0.50 0.010 250)" }}>Binance verileri yükleniyor...</span>
-              </div>
-            )}
-
-            {!loading && (!tickers || tickers.length === 0) && (
-              <div className="px-5 py-8 text-center">
-                <span className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>Veri alınamadı</span>
-              </div>
-            )}
-
-            {CRYPTO_LIST.map((crypto, i) => {
-              const ticker = tickerMap.get(crypto.symbol);
-              if (!ticker && !loading) return null;
-              const pct = ticker ? parseFloat(ticker.priceChangePercent) : 0;
-              const up = pct >= 0;
-
-              return (
-                <div
-                  key={crypto.symbol}
-                  className="grid items-center px-5 py-3.5 cursor-pointer transition-all duration-150 hover:bg-white/[0.03]"
-                  style={{
-                    gridTemplateColumns: "2fr 2fr 1.5fr 2fr 2fr 2fr",
-                    borderBottom: i < CRYPTO_LIST.length - 1 ? "1px solid oklch(0.15 0.012 250)" : "none",
-                    background: selectedSymbol === crypto.symbol ? "oklch(0.75 0.18 55 / 0.04)" : "oklch(0.11 0.015 250)",
-                  }}
-                  onClick={() => {
-                    setSelectedCrypto(crypto.ticker);
-                    setSelectedSymbol(crypto.symbol);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                >
-                  {/* Kripto adı */}
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
-                      style={{ background: crypto.color + "22", border: `1px solid ${crypto.color}55`, color: crypto.color }}
-                    >
-                      {crypto.short.slice(0, 2)}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.90 0.005 250)" }}>
-                        {crypto.short}
-                      </div>
-                      <div className="text-xs" style={{ color: "oklch(0.50 0.010 250)" }}>{crypto.name}</div>
-                    </div>
-                  </div>
-
-                  {/* Fiyat */}
-                  <div className="text-right">
-                    <span className="font-mono text-sm font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.92 0.005 250)" }}>
-                      {ticker ? `$${formatPrice(ticker.lastPrice)}` : "—"}
-                    </span>
-                  </div>
-
-                  {/* 24s Değişim */}
-                  <div className="text-right">
-                    {ticker ? (
-                      <span
-                        className="inline-flex items-center gap-0.5 font-mono text-sm px-2 py-0.5 rounded"
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          color: up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
-                          background: up ? "oklch(0.70 0.18 160 / 0.08)" : "oklch(0.60 0.22 25 / 0.08)",
-                        }}
-                      >
-                        {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {up ? "+" : ""}{pct.toFixed(2)}%
-                      </span>
-                    ) : "—"}
-                  </div>
-
-                  {/* 24s Yüksek */}
-                  <div className="text-right">
-                    <span className="font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.80 0.005 250)" }}>
-                      {ticker ? `$${formatPrice(ticker.highPrice)}` : "—"}
-                    </span>
-                  </div>
-
-                  {/* 24s Düşük */}
-                  <div className="text-right">
-                    <span className="font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.80 0.005 250)" }}>
-                      {ticker ? `$${formatPrice(ticker.lowPrice)}` : "—"}
-                    </span>
-                  </div>
-
-                  {/* Hacim */}
-                  <div className="text-right">
-                    <span className="font-mono text-sm" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.75 0.18 55)" }}>
-                      {ticker ? formatVolume(ticker.quoteVolume) : "—"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
