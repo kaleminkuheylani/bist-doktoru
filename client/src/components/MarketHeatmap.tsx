@@ -66,7 +66,6 @@ export default function MarketHeatmap({ stocks, selectedSymbol, onSelect }: Prop
 
     // Sektöre göre grupla
     const byS = d3.group(stocks, (s) => s.sector);
-    type TreeDatum = { name: string; value?: number } & Partial<HeatmapStock>;
     const root = d3.hierarchy<any>({
       name: "root",
       children: Array.from(byS, ([sector, items]) => ({

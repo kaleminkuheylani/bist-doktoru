@@ -99,7 +99,8 @@ function fmtHacim(v: number): string {
 }
 
 // ─── Twelve Data — tarayıcıdan direkt çağrı ───────────────────────────────
-const TD_KEY = import.meta.env.VITE_TWELVE_DATA_KEY as string | undefined;
+// Vercel'de VITE_TWELVE_DATA_KEY env var olarak ayarla; yoksa inline key kullanılır
+const TD_KEY = (import.meta.env.VITE_TWELVE_DATA_KEY as string | undefined) || "a9ee562223e34aa59be0ae4075b10085";
 const TD_BASE = "https://api.twelvedata.com";
 
 async function fetchStocksFromTwelveData(): Promise<StockItem[] | null> {
