@@ -31,15 +31,21 @@ async function fromCollectApi() {
   if (!res.ok) throw new Error(`CollectAPI error: ${res.status}`);
   const json = await res.json();
   if (!json.success) throw new Error("CollectAPI: success=false");
-  const result = (json.result as any[]).map((item: any) => ({
-    code: String(item.code ?? ""),
-    text: item.text || item.name || String(item.code ?? ""),
-    lastprice: parseFloat(item.lastprice) || 0,
-    lastpricestr: item.lastpricestr || String((parseFloat(item.lastprice) || 0).toFixed(2)),
-    rate: parseFloat(item.rate) || 0,
-    hacim: parseFloat(item.hacim) || 0,
-    hacimstr: item.hacimstr || fmtHacim(parseFloat(item.hacim) || 0),
-  }));
+  const result = (json.result as any[]).map((item: any) => {
+    const min = parseFloat(item.min) || undefined;
+    const max = parseFloat(item.max) || undefined;
+    return {
+      code: String(item.code ?? ""),
+      text: item.text || item.name || String(item.code ?? ""),
+      lastprice: parseFloat(item.lastprice) || 0,
+      lastpricestr: item.lastpricestr || String((parseFloat(item.lastprice) || 0).toFixed(2)),
+      rate: parseFloat(item.rate) || 0,
+      hacim: parseFloat(item.hacim) || 0,
+      hacimstr: item.hacimstr || fmtHacim(parseFloat(item.hacim) || 0),
+      ...(min !== undefined && { min, minstr: item.minstr || min.toFixed(2) }),
+      ...(max !== undefined && { max, maxstr: item.maxstr || max.toFixed(2) }),
+    };
+  });
   return { success: true, result };
 }
 
@@ -58,6 +64,8 @@ async function fromTwelveData() {
       const price = parseFloat(q.close) || 0;
       const pct = parseFloat(q.percent_change) || 0;
       const vol = parseInt(q.volume, 10) || 0;
+      const low = parseFloat(q.low) || undefined;
+      const high = parseFloat(q.high) || undefined;
       return {
         code: sym,
         text: q.name || sym,
@@ -66,6 +74,8 @@ async function fromTwelveData() {
         rate: pct,
         hacim: vol,
         hacimstr: fmtHacim(vol),
+        ...(low !== undefined && { min: low, minstr: low.toFixed(2) }),
+        ...(high !== undefined && { max: high, maxstr: high.toFixed(2) }),
       };
     });
   if (result.length === 0) throw new Error("Twelve Data: no valid quotes");
@@ -90,6 +100,8 @@ async function fromYahoo() {
     rate: q.regularMarketChangePercent ?? 0,
     hacim: q.regularMarketVolume ?? 0,
     hacimstr: fmtHacim(q.regularMarketVolume ?? 0),
+    ...(q.regularMarketDayLow != null && { min: q.regularMarketDayLow, minstr: (q.regularMarketDayLow as number).toFixed(2) }),
+    ...(q.regularMarketDayHigh != null && { max: q.regularMarketDayHigh, maxstr: (q.regularMarketDayHigh as number).toFixed(2) }),
   }));
   return { success: true, result };
 }
