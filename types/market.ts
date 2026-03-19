@@ -20,6 +20,10 @@ export type StockItem = {
   rate: number;
   hacim: number;
   hacimstr: string;
+  min?: number;
+  minstr?: string;
+  max?: number;
+  maxstr?: string;
 };
 
 export type BistIndex = {

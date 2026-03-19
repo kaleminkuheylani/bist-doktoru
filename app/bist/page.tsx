@@ -331,11 +331,15 @@ export default function BistPage() {
                       {s.text || s.sector}
                     </div>
                   </div>
-                  <div className="font-mono text-xs w-16 text-right"
+                  <div className="font-mono text-xs w-14 text-right"
                     style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.85 0.005 250)" }}>
                     ₺{s.lastpricestr}
                   </div>
-                  <div className="font-mono text-xs w-16 text-right"
+                  <div className="font-mono text-xs w-12 text-right"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.50 0.010 250)" }}>
+                    {s.hacimstr}
+                  </div>
+                  <div className="font-mono text-xs w-14 text-right"
                     style={{ fontFamily: "'JetBrains Mono', monospace", color: rateColor(s.rate) }}>
                     {s.rate > 0 ? "+" : ""}{s.rate.toFixed(2)}%
                   </div>
@@ -388,11 +392,18 @@ export default function BistPage() {
                   </span>
                 </div>
 
-                <div className="ml-auto text-xs"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <div className="text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   <div style={{ color: "oklch(0.40 0.010 250)" }}>Hacim</div>
                   <div style={{ color: "oklch(0.80 0.005 250)" }}>{selectedStock.hacimstr}</div>
                 </div>
+                {(selectedStock.min != null || selectedStock.max != null) && (
+                  <div className="text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ color: "oklch(0.40 0.010 250)" }}>Gün Aralığı</div>
+                    <div style={{ color: "oklch(0.80 0.005 250)" }}>
+                      ₺{selectedStock.minstr ?? "—"} <span style={{ color: "oklch(0.35 0.010 250)" }}>—</span> ₺{selectedStock.maxstr ?? "—"}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <span className="text-sm" style={{ color: "oklch(0.45 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
