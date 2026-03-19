@@ -2,10 +2,10 @@
  * BIST Doktoru - BIST Hisse Senetleri Sayfası
  * CollectAPI canlı hisse verileri + TradingView grafikleri
  */
-import { useState, useMemo } from "react";
-import { BarChart2, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { BarChart2, ChevronUp, ChevronDown } from "lucide-react";
 import TradingViewWidget from "@/components/TradingViewWidget";
-import { useStocks, useBist } from "@/hooks/useMarketData";
+import { useStocks, useBist, useGold } from "@/hooks/useMarketData";
 
 // Sektör eşleştirme (CollectAPI sadece kod verir, sektörü text'ten tahmin ederiz)
 const SECTOR_KEYWORDS: Record<string, string> = {
@@ -33,11 +33,11 @@ const SECTORS = ["Tümü", "Bankacılık", "Holding", "Ulaşım", "Savunma", "Me
 export default function BistPage() {
   const [selectedStock, setSelectedStock] = useState("BIST:THYAO");
   const [selectedSymbol, setSelectedSymbol] = useState("THYAO");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSector, setSelectedSector] = useState("Tümü");
 
   const { data: stocks, loading } = useStocks();
   const { data: bist } = useBist();
+  const { data: gold } = useGold();
 
   const enrichedStocks = useMemo(() => {
     if (!stocks) return [];
@@ -49,13 +49,18 @@ export default function BistPage() {
 
   const filteredStocks = useMemo(() => {
     return enrichedStocks.filter((s) => {
-      const matchSearch =
-        s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.text.toLowerCase().includes(searchQuery.toLowerCase());
       const matchSector = selectedSector === "Tümü" || s.sector === selectedSector;
-      return matchSearch && matchSector;
+      return matchSector;
     });
-  }, [enrichedStocks, searchQuery, selectedSector]);
+  }, [enrichedStocks, selectedSector]);
+
+  // Sektör filtresi değişince ilk hisseyi TradingView'a yansıt
+  useEffect(() => {
+    if (filteredStocks.length > 0) {
+      setSelectedStock(`BIST:${filteredStocks[0].code}`);
+      setSelectedSymbol(filteredStocks[0].code);
+    }
+  }, [selectedSector]);
 
   return (
     <div className="min-h-screen">
@@ -115,24 +120,8 @@ export default function BistPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Sol: Hisse Listesi (CollectAPI) */}
           <div className="xl:col-span-1">
-            {/* Arama & Filtre */}
-            <div className="mb-4 space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.50 0.010 250)" }} />
-                <input
-                  type="text"
-                  placeholder="Hisse ara... (THYAO, GARAN...)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm outline-none"
-                  style={{
-                    background: "oklch(0.14 0.015 250)",
-                    border: "1px solid oklch(0.22 0.012 250)",
-                    color: "oklch(0.90 0.005 250)",
-                    fontFamily: "'Space Grotesk', sans-serif",
-                  }}
-                />
-              </div>
+            {/* Filtre */}
+            <div className="mb-4">
               <div className="flex gap-2 flex-wrap">
                 {SECTORS.slice(0, 6).map((sector) => (
                   <button
@@ -306,6 +295,49 @@ export default function BistPage() {
             </div>
           </div>
         </div>
+
+        {/* Altın Fiyatları — CollectAPI */}
+        {gold && gold.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.95 0.005 250)" }}>
+              Altın Fiyatları
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {gold.map((item) => {
+                const change = item.change ? parseFloat(item.change) : null;
+                const up = change !== null ? change >= 0 : null;
+                return (
+                  <div
+                    key={item.name}
+                    className="rounded-xl p-3"
+                    style={{ background: "oklch(0.11 0.015 250)", border: "1px solid oklch(0.20 0.012 250)" }}
+                  >
+                    <div className="text-xs mb-2 truncate" style={{ color: "oklch(0.55 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                      {item.name}
+                    </div>
+                    <div className="font-mono text-sm font-bold" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.75 0.18 55)" }}>
+                      ₺{item.buy}
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="font-mono text-xs" style={{ fontFamily: "'JetBrains Mono', monospace", color: "oklch(0.50 0.010 250)" }}>
+                        S: ₺{item.sell}
+                      </div>
+                      {up !== null && (
+                        <div
+                          className="flex items-center gap-0.5 text-xs font-mono"
+                          style={{ fontFamily: "'JetBrains Mono', monospace", color: up ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)" }}
+                        >
+                          {up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {up ? "+" : ""}{change!.toFixed(2)}%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* BIST Screener Widget */}
         <div className="mt-8">

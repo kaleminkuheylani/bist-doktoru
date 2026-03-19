@@ -3,7 +3,7 @@
  * Design: Bloomberg Terminal meets Modern Fintech
  * Dark theme, sidebar navigation, canlı ticker (CollectAPI)
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   BarChart2,
@@ -19,6 +19,15 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useCurrency, useGold, useBist } from "@/hooks/useMarketData";
+
+// BIST saatleri: Pazartesi-Cuma 10:00-18:00 (Türkiye saati UTC+3)
+function isBistOpen(now: Date): boolean {
+  const istanbul = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+  const day = istanbul.getDay(); // 0=Pazar, 6=Cumartesi
+  if (day === 0 || day === 6) return false;
+  const mins = istanbul.getHours() * 60 + istanbul.getMinutes();
+  return mins >= 600 && mins < 1080; // 10:00 - 18:00
+}
 
 const NAV_ITEMS = [
   { href: "/", label: "Ana Sayfa", icon: Home },
@@ -136,6 +145,14 @@ function TickerStrip() {
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [location] = useLocation();
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const marketOpen = isBistOpen(now);
 
   return (
     <>
@@ -185,12 +202,23 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
         {/* Market status */}
         <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(0.20 0.012 250)" }}>
           <div className="flex items-center gap-2 text-xs">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "oklch(0.70 0.18 160)" }} />
-            <span style={{ color: "oklch(0.70 0.18 160)", fontFamily: "'JetBrains Mono', monospace" }}>
-              Piyasa Açık
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: marketOpen ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
+                animation: marketOpen ? "pulse 2s infinite" : "none",
+              }}
+            />
+            <span
+              style={{
+                color: marketOpen ? "oklch(0.70 0.18 160)" : "oklch(0.60 0.22 25)",
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {marketOpen ? "Piyasa Açık" : "Piyasa Kapalı"}
             </span>
             <span className="ml-auto" style={{ color: "oklch(0.50 0.010 250)", fontFamily: "'JetBrains Mono', monospace" }}>
-              {new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+              {now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}
             </span>
           </div>
         </div>
