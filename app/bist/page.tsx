@@ -328,7 +328,7 @@ export default function BistPage() {
                       {s.code}
                     </div>
                     <div className="truncate" style={{ color: "oklch(0.38 0.010 250)", fontFamily: "'Space Grotesk', sans-serif", fontSize: "10px" }}>
-                      {s.sector}
+                      {s.text || s.sector}
                     </div>
                   </div>
                   <div className="font-mono text-xs w-16 text-right"
