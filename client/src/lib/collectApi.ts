@@ -34,9 +34,15 @@ export type BistIndex = {
   maxstr: string;
 };
 
+function fetchWithTimeout(url: string, ms = 7000): Promise<Response> {
+  const ac = new AbortController();
+  const id = setTimeout(() => ac.abort(), ms);
+  return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(id));
+}
+
 async function apiFetch<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(path);
+    const res = await fetchWithTimeout(path, 5000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (!json.success) return null;
@@ -50,8 +56,9 @@ async function apiFetch<T>(path: string): Promise<T | null> {
 // CollectAPI key yoksa veya sunucu erişimi yoksa devreye girer
 async function fetchGoldFromCdn(): Promise<GoldItem[] | null> {
   try {
-    const res = await fetch(
-      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json"
+    const res = await fetchWithTimeout(
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json",
+      7000
     );
     if (!res.ok) return null;
     const json = await res.json();
@@ -95,9 +102,8 @@ function fmtHacim(v: number): string {
 async function fetchStocksFromYahoo(): Promise<StockItem[] | null> {
   try {
     const syms = BIST_YF_SYMBOLS.map((s) => `${s}.IS`).join(",");
-    // corsproxy.io üzerinden CORS sorunu aşılır
     const target = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${syms}&lang=tr&region=TR`;
-    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`);
+    const res = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(target)}`, 7000);
     if (!res.ok) return null;
     const json = await res.json();
     const quotes: any[] = json?.quoteResponse?.result ?? [];
@@ -119,7 +125,7 @@ async function fetchStocksFromYahoo(): Promise<StockItem[] | null> {
 async function fetchBistFromYahoo(): Promise<BistIndex | null> {
   try {
     const target = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=XU100.IS&lang=tr&region=TR`;
-    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`);
+    const res = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(target)}`, 7000);
     if (!res.ok) return null;
     const json = await res.json();
     const q = json?.quoteResponse?.result?.[0];

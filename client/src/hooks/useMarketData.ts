@@ -22,10 +22,16 @@ function usePolling<T>(fetcher: () => Promise<T | null>, interval = REFRESH_INTE
     let mounted = true;
 
     const load = async () => {
-      const result = await fetcher();
-      if (mounted) {
-        setData(result);
-        setLoading(false);
+      // Failsafe: ağ erişimi yoksa max 10 sn bekle, sonra loading kapat
+      const failsafe = setTimeout(() => { if (mounted) setLoading(false); }, 10_000);
+      try {
+        const result = await fetcher();
+        if (mounted) {
+          setData(result);
+          setLoading(false);
+        }
+      } finally {
+        clearTimeout(failsafe);
       }
     };
 
