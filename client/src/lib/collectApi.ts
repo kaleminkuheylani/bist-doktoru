@@ -98,6 +98,23 @@ function fmtHacim(v: number): string {
   return String(v);
 }
 
+// ─── CollectAPI — tarayıcıdan direkt çağrı ────────────────────────────────
+const COLLECT_KEY = (import.meta.env.VITE_COLLECTAPI_KEY as string | undefined) || "";
+const COLLECT_BASE = "https://api.collectapi.com/economy";
+
+async function fetchStocksFromCollectApi(): Promise<StockItem[] | null> {
+  if (!COLLECT_KEY) return null;
+  try {
+    const res = await fetchWithTimeout(`${COLLECT_BASE}/liveBorsa`, 10_000);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.success || !Array.isArray(json.result)) return null;
+    return json.result as StockItem[];
+  } catch {
+    return null;
+  }
+}
+
 // ─── Twelve Data — tarayıcıdan direkt çağrı ───────────────────────────────
 const TD_KEY = (import.meta.env.VITE_TWELVE_DATA_KEY as string | undefined) || "a9ee562223e34aa59be0ae4075b10085";
 const TD_BASE = "https://api.twelvedata.com";
@@ -196,10 +213,12 @@ export const fetchGold = async (): Promise<GoldItem[] | null> => {
   return fetchGoldFromCdn();
 };
 
-// Öncelik: sunucu → Twelve Data (tarayıcı) → Yahoo Finance
+// Öncelik: sunucu → CollectAPI liveBorsa (tarayıcı) → Twelve Data (tarayıcı)
 export const fetchStocks = async (): Promise<StockItem[] | null> => {
   const fromServer = await apiFetch<StockItem[]>("/api/stocks");
   if (fromServer) return fromServer;
+  const fromCollect = await fetchStocksFromCollectApi();
+  if (fromCollect) return fromCollect;
   return fetchStocksFromTwelveData();
 };
 

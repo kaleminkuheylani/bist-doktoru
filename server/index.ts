@@ -240,7 +240,7 @@ async function startServer() {
       catch (e) { console.warn("[stocks] Twelve Data failed:", String(e)); }
     }
     if (COLLECTAPI_KEY) {
-      try { return res.json(await collectApiFetch("/hisseSenedi")); }
+      try { return res.json(await collectApiFetch("/liveBorsa")); }
       catch (e) { console.warn("[stocks] CollectAPI failed:", String(e)); }
     }
     try { return res.json(await fetchStocksFromYahoo()); }
