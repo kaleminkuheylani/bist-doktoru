@@ -10,16 +10,21 @@ export type BinanceTicker = {
   openPrice: string;
 };
 
-async function apiFetch<T>(path: string): Promise<T | null> {
+const SYMBOLS = [
+  "BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT",
+  "ADAUSDT","DOGEUSDT","AVAXUSDT","DOTUSDT","LINKUSDT",
+  "LTCUSDT","UNIUSDT",
+];
+
+export async function fetchBinanceTickers(): Promise<BinanceTicker[] | null> {
   try {
-    const res = await fetch(path);
+    const symbolsParam = encodeURIComponent(JSON.stringify(SYMBOLS));
+    const res = await fetch(
+      `https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if (!json.success) return null;
-    return json.result as T;
+    return await res.json() as BinanceTicker[];
   } catch {
     return null;
   }
 }
-
-export const fetchBinanceTickers = () => apiFetch<BinanceTicker[]>("/api/binance");
