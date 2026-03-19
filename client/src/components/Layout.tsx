@@ -105,8 +105,13 @@ function TickerStrip() {
 
   return (
     <div
-      className="h-[46px] overflow-hidden border-b"
-      style={{ borderColor: "oklch(0.22 0.012 250)", background: "oklch(0.10 0.015 250)" }}
+      className="h-[46px] border-b"
+      style={{
+        borderColor: "oklch(0.22 0.012 250)",
+        background: "oklch(0.10 0.015 250)",
+        overflow: "hidden",
+        cursor: "grab",
+      }}
     >
       <div className="ticker-track h-full flex items-center">
         {doubled.map((item, i) => (
