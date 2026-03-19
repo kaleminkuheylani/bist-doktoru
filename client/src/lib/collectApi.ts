@@ -99,37 +99,66 @@ function fmtHacim(v: number): string {
 }
 
 // ─── Twelve Data — tarayıcıdan direkt çağrı ───────────────────────────────
-// Vercel'de VITE_TWELVE_DATA_KEY env var olarak ayarla; yoksa inline key kullanılır
 const TD_KEY = (import.meta.env.VITE_TWELVE_DATA_KEY as string | undefined) || "a9ee562223e34aa59be0ae4075b10085";
 const TD_BASE = "https://api.twelvedata.com";
+
+// Sembol listesini n'li gruplara böler
+function chunk<T>(arr: T[], n: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
+// Tek batch için Twelve Data /quote isteği
+async function fetchBatch(symbols: string[]): Promise<StockItem[]> {
+  const url = `${TD_BASE}/quote?symbol=${symbols.join(",")}&exchange=BIST&apikey=${TD_KEY}`;
+  const res = await fetchWithTimeout(url, 12_000);
+  if (!res.ok) return [];
+  const json = await res.json();
+
+  // Top-level hata (rate limit, geçersiz key vb.)
+  if (json.code || json.status === "error") {
+    console.warn("[TwelveData] batch error:", json.message ?? json.code);
+    return [];
+  }
+
+  // Tek sembol için yanıt direkt obje olarak gelir
+  const data: Record<string, any> = symbols.length === 1 ? { [symbols[0]]: json } : json;
+
+  return symbols
+    .filter((sym) => data[sym] && !data[sym].code)
+    .map((sym) => {
+      const q = data[sym];
+      const price = parseFloat(q.close)          || 0;
+      const pct   = parseFloat(q.percent_change) || 0;
+      const vol   = parseInt(q.volume, 10)       || 0;
+      return {
+        code:         sym,
+        text:         q.name || sym,
+        lastprice:    price,
+        lastpricestr: price.toFixed(2),
+        rate:         pct,
+        hacim:        vol,
+        hacimstr:     fmtHacim(vol),
+      };
+    });
+}
 
 async function fetchStocksFromTwelveData(): Promise<StockItem[] | null> {
   if (!TD_KEY) return null;
   try {
-    const url = `${TD_BASE}/quote?symbol=${BIST_SYMBOLS.join(",")}&exchange=BIST&apikey=${TD_KEY}`;
-    const res = await fetchWithTimeout(url, 10_000);
-    if (!res.ok) return null;
-    const json = await res.json();
-    // Twelve Data hata objelerini filtrele (code alanı varsa hata)
-    const result = BIST_SYMBOLS
-      .filter((sym) => json[sym] && !json[sym].code)
-      .map((sym) => {
-        const q = json[sym];
-        const price = parseFloat(q.close)          || 0;
-        const pct   = parseFloat(q.percent_change) || 0;
-        const vol   = parseInt(q.volume, 10)       || 0;
-        return {
-          code:         sym,
-          text:         q.name || sym,
-          lastprice:    price,
-          lastpricestr: price.toFixed(2),
-          rate:         pct,
-          hacim:        vol,
-          hacimstr:     fmtHacim(vol),
-        };
-      });
-    return result.length > 0 ? result : null;
-  } catch {
+    // Ücretsiz plan: 8 kredi/dk — her batch = 1 istek (1 kredi)
+    // 40 sembol → 5 batch × 8 sembol, aralarında 200ms bekleme
+    const batches = chunk(BIST_SYMBOLS, 8);
+    const results: StockItem[] = [];
+    for (let i = 0; i < batches.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 200));
+      const items = await fetchBatch(batches[i]);
+      results.push(...items);
+    }
+    return results.length > 0 ? results : null;
+  } catch (e) {
+    console.error("[TwelveData] fetchStocks error:", e);
     return null;
   }
 }

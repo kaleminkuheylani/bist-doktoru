@@ -437,8 +437,7 @@ export default function BistPage() {
                     Veri bulunamadı
                   </div>
                   <div className="text-xs" style={{ color: "oklch(0.40 0.010 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-                    VITE_TWELVE_DATA_KEY ortam değişkenini Vercel'de tanımlayın
-                  </div>
+                    Twelve Data'dan veri alınamadı — piyasa kapalı veya API limiti aşıldı                  </div>
                 </div>
               </div>
             ) : view === "heatmap" ? (
