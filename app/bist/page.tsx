@@ -25,7 +25,8 @@ const SECTOR_MAP: Record<string, string> = {
   PERAKENDE: "Perakende", MIGROS: "Perakende", BIM: "Perakende",
 };
 
-function getSector(text: string): string {
+function getSector(text?: string | null): string {
+  if (!text) return "Diğer";
   const up = text.toUpperCase();
   for (const [kw, s] of Object.entries(SECTOR_MAP)) {
     if (up.includes(kw)) return s;
@@ -86,7 +87,7 @@ export default function BistPage() {
     if (selectedSector !== "Tümü") list = list.filter((s) => s.sector === selectedSector);
     if (search.trim()) {
       const q = search.trim().toUpperCase();
-      list = list.filter((s) => s.code.includes(q) || s.text.toUpperCase().includes(q));
+      list = list.filter((s) => s.code.includes(q) || (s.text ?? "").toUpperCase().includes(q));
     }
     return [...list].sort((a, b) => {
       const va = sortBy === "rate" ? a.rate : sortBy === "price" ? a.lastprice : a.hacim;
