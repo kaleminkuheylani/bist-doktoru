@@ -109,7 +109,8 @@ async function startServer() {
         headers: { "User-Agent": "Mozilla/5.0" },
       });
       if (!response.ok) throw new Error(`TCMB error: ${response.status}`);
-      const xml = await response.text();
+      const buf = await response.arrayBuffer();
+      const xml = new TextDecoder("iso-8859-9").decode(buf);
       const currencies = parseTcmbXml(xml);
       res.json({ success: true, result: currencies });
     } catch (err) {
